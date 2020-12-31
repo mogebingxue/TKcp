@@ -1,0 +1,36 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "TKcpDemo/1.0.0": {
+        "dependencies": {
+          "TKcp": "1.0.0"
+        },
+        "runtime": {
+          "TKcpDemo.dll": {}
+        }
+      },
+      "TKcp/1.0.0": {
+        "runtime": {
+          "TKcp.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "TKcpDemo/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "TKcp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
