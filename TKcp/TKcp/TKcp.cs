@@ -16,11 +16,16 @@ namespace System.Net.Sockets.TKcp
         /// Kcp会话
         /// </summary>
         uint conv = 1234;
-
+        
         TKcpHandle handle;
         Kcp.Kcp kcp;
         Socket sockekt;
 
+
+        /// <summary>
+        /// 数据源地址和端口号
+        /// </summary>
+        public IPEndPoint remote;
         /// <summary>
         /// 数据接受缓冲区
         /// </summary>
@@ -104,15 +109,20 @@ namespace System.Net.Sockets.TKcp
         /// TKcp的更新操作，负责自动input
         /// </summary>
         void TKcpUpdata() {
-            
+
             EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
             while (true) {
                 kcp.Update(DateTime.UtcNow);
-                recvBuffer = new byte[sockekt.ReceiveBufferSize];
-                sockekt.ReceiveFrom(recvBuffer, ref remote);
-                //Console.WriteLine("UDP接收数据！");
-                kcp.Input(recvBuffer);
-                recvBuffer = null;
+                if (sockekt.ReceiveBufferSize > 0) {
+                    recvBuffer = new byte[sockekt.ReceiveBufferSize];
+                    sockekt.ReceiveFrom(recvBuffer, ref remote);
+                    //Console.WriteLine("UDP接收数据！");
+                    kcp.Input(recvBuffer);
+                    this.remote = (IPEndPoint)remote;
+                    //Console.WriteLine(this.remote.Port);
+                    recvBuffer = null;
+                }
+                
 
             }
         }
