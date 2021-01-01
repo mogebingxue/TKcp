@@ -24,7 +24,7 @@ namespace System.Net.Sockets.TKcp
         /// <summary>
         /// 数据接受缓冲区
         /// </summary>
-        ByteArray recvBuffer = new ByteArray(4096);
+        byte[] recvBuffer;
         #region 构造函数
         public TKcp(IPAddress ip, int port) {
             this.iPEndPoint = new IPEndPoint(ip, port);
@@ -61,7 +61,7 @@ namespace System.Net.Sockets.TKcp
             handle.socket = sockekt;
             kcp.Send(buffer);
             
-            Console.WriteLine("应用层发送数据！");
+            //Console.WriteLine("应用层发送数据！");
         }
         /// <summary>
         /// 接收数据
@@ -71,7 +71,7 @@ namespace System.Net.Sockets.TKcp
             var (temp, avalidSzie) = kcp.TryRecv();
             if (avalidSzie > 0) {
                 temp.Memory.Span.Slice(0, avalidSzie).CopyTo(buffer);
-                Console.WriteLine("应用层接收数据！");
+                //Console.WriteLine("应用层接收数据！");
                 return avalidSzie;
             }
             return -1;
@@ -108,9 +108,11 @@ namespace System.Net.Sockets.TKcp
             EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
             while (true) {
                 kcp.Update(DateTime.UtcNow);
-                sockekt.ReceiveFrom(recvBuffer.bytes, ref remote);
-                Console.WriteLine("UDP接收数据！");
-                kcp.Input(recvBuffer.bytes);
+                recvBuffer = new byte[sockekt.ReceiveBufferSize];
+                sockekt.ReceiveFrom(recvBuffer, ref remote);
+                //Console.WriteLine("UDP接收数据！");
+                kcp.Input(recvBuffer);
+                recvBuffer = null;
 
             }
         }

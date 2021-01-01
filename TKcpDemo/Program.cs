@@ -10,8 +10,8 @@ namespace TKcpDemo
             IPAddress ipAdress = IPAddress.Parse("127.0.0.1");
             TKcp tKcp1 = new TKcp(ipAdress,8888);
             TKcp tKcp2 = new TKcp(ipAdress, 8889);
-            tKcp1.Send(System.Text.Encoding.Default.GetBytes("姚姚姚"),new IPEndPoint(ipAdress,8889));
-
+            tKcp1.Send(System.Text.Encoding.Default.GetBytes("姚姚姚1"),new IPEndPoint(ipAdress,8889));
+            tKcp1.Send(System.Text.Encoding.Default.GetBytes("姚姚姚2"), new IPEndPoint(ipAdress, 8889));
             Span<byte> buffer = new byte[4096];
             while (true) {
                 tKcp2.Receive(buffer);

@@ -24,7 +24,7 @@ namespace System.Net.Sockets.TKcp
         public void Output(IMemoryOwner<byte> buffer, int avalidLength) {
             if (socket != null) {
                 socket.SendTo(buffer.Memory.Span.ToArray(), dipep);
-                Console.WriteLine("UDP发送数据！");
+                //Console.WriteLine("UDP发送数据！");
             }
         }
     }
