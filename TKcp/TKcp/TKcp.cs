@@ -16,10 +16,10 @@ namespace System.Net.Sockets.TKcp
         /// Kcp会话
         /// </summary>
         uint conv = 1234;
-        
+
         TKcpHandle handle;
         Kcp.Kcp kcp;
-        Socket sockekt;
+        Socket socket;
 
 
         /// <summary>
@@ -54,20 +54,30 @@ namespace System.Net.Sockets.TKcp
         }
         #endregion
 
-
         /// <summary>
         /// 发送数据
         /// </summary>
-        /// <param name="buffer">发送的数据</param>
+        /// <param name="bytes">发送的数据</param>
         /// <param name="iPEndPoint">目标端口</param>
-        public void Send(Span<byte> buffer, IPEndPoint dipep) {
-            
-            handle.dipep = dipep;
-            handle.socket = sockekt;
-            kcp.Send(buffer);
-            
+        public void Send(Span<byte> bytes, IPEndPoint dipep) {
+            Span<byte> temp = TKcpUtility.Encode(bytes, dipep);
+            kcp.Send(temp);
+            handle.Out = buffer => {
+                int offset = buffer.Span.Length;
+                Span<byte> temp = buffer.Span;
+                
+                while (offset > 0) {
+                    Console.WriteLine(offset);
+                    var (res, dipep) = TKcpUtility.Decode(temp, ref offset);
+                    socket.SendTo(res, dipep);
+                    Console.WriteLine("UDP发送数据！" + res.Length+" " + iPEndPoint + " TO " + dipep);
+                }
+            };
+
+
             //Console.WriteLine("应用层发送数据！");
         }
+
         /// <summary>
         /// 接收数据
         /// </summary>
@@ -76,7 +86,7 @@ namespace System.Net.Sockets.TKcp
             var (temp, avalidSzie) = kcp.TryRecv();
             if (avalidSzie > 0) {
                 temp.Memory.Span.Slice(0, avalidSzie).CopyTo(buffer);
-                //Console.WriteLine("应用层接收数据！");
+                Console.WriteLine("应用层接收数据！");
                 return avalidSzie;
             }
             return -1;
@@ -86,17 +96,17 @@ namespace System.Net.Sockets.TKcp
         /// 启动TKcp
         /// </summary>
         void StartTKcp() {
-
+            //初始化UDP
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            socket.Bind(iPEndPoint);
             //初始化Kcp
             handle = new TKcpHandle();
+
             kcp = new Kcp.Kcp(conv, handle);
             kcp.NoDelay(1, 10, 2, 1);//fast
             kcp.WndSize(64, 64);
             kcp.SetMtu(512);
-            
-            //初始化UDP
-            sockekt = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            sockekt.Bind(iPEndPoint);
+
             Console.WriteLine("启动TKcp");
             //创建无参的线程
             Thread TKcpUpdata = new Thread(new ThreadStart(this.TKcpUpdata));
@@ -113,16 +123,16 @@ namespace System.Net.Sockets.TKcp
             EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
             while (true) {
                 kcp.Update(DateTime.UtcNow);
-                if (sockekt.ReceiveBufferSize > 0) {
-                    recvBuffer = new byte[sockekt.ReceiveBufferSize];
-                    sockekt.ReceiveFrom(recvBuffer, ref remote);
-                    //Console.WriteLine("UDP接收数据！");
+                if (socket.ReceiveBufferSize > 0) {
+                    recvBuffer = new byte[socket.ReceiveBufferSize];
+                    socket.ReceiveFrom(recvBuffer, ref remote);
+                    //Console.WriteLine("UDP接收数据！"+System.Text.Encoding.UTF8.GetString(recvBuffer)+iPEndPoint+" FROM "+remote);
                     kcp.Input(recvBuffer);
                     this.remote = (IPEndPoint)remote;
                     //Console.WriteLine(this.remote.Port);
                     recvBuffer = null;
                 }
-                
+
 
             }
         }

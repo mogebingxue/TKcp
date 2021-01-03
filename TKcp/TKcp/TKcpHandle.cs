@@ -8,24 +8,20 @@ namespace System.Net.Sockets.TKcp
 {
     class TKcpHandle : IKcpCallback
     {
-        /// <summary>
-        /// 发送的UDP
-        /// </summary>
-        public Socket socket;
-        /// <summary>
-        /// 目标IPEndPoint,DestinationIPEndPoint
-        /// </summary>
-        public IPEndPoint dipep = null;
+        public Action<Memory<byte>> Out;
         /// <summary>
         /// output
         /// </summary>
         /// <param name="buffer"></param>
         /// <param name="avalidLength"></param>
         public void Output(IMemoryOwner<byte> buffer, int avalidLength) {
-            if (socket != null) {
-                socket.SendTo(buffer.Memory.Span.ToArray(), dipep);
-                //Console.WriteLine("UDP发送数据！");
+            using (buffer) {
+                if (Out!=null) {
+                    Out(buffer.Memory.Slice(0, avalidLength));
+                }
+                
             }
         }
     }
 }
+
