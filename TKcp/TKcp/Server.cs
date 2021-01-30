@@ -12,7 +12,9 @@ namespace System.Net.Sockets.TKcp
         //由客户端ping，客户端收到消息或者收到pong更新时间，一段时没收到就ping，长时间没收到就断开，
         //服务端在updatapeer时也检查ping，收到ping更新时间，长时间收不到断开连接,执行disconnecthandle
 
-        Dictionary<uint, Peer> peerPool = new Dictionary<uint, Peer>();
+        Dictionary<uint, Peer> peers = new Dictionary<uint, Peer>();
+
+        Dictionary<uint, EndPoint> clients = new Dictionary<uint, EndPoint>();
 
         /// <summary>
         /// 服务端udp
@@ -20,8 +22,7 @@ namespace System.Net.Sockets.TKcp
         Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
         IPEndPoint localIpep = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8888);
-
-
+        private int pingInterval = 30;
 
         public Server() {
             InitServer();
@@ -42,12 +43,39 @@ namespace System.Net.Sockets.TKcp
         uint GenerateConv() {
             Random random = new Random();
             uint conv = ((uint)(random.Next(int.MinValue + 1000, int.MaxValue) - int.MinValue));
-            while (peerPool.ContainsKey(conv)) {
+            while (peers.ContainsKey(conv)) {
                 conv = ((uint)(random.Next(int.MinValue + 1000, int.MaxValue) - int.MinValue));
             }
             return conv;
 
         }
+
+        /// <summary>
+        /// 获取时间戳
+        /// </summary>
+        /// <returns></returns>
+        public long GetTimeStamp() {
+            TimeSpan ts = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0);
+            return Convert.ToInt64(ts.TotalSeconds);
+        }
+
+        public void CheckPing(Peer peer) {
+            //现在的时间戳
+            long timeNow = GetTimeStamp();
+            //Ping 一下
+            if (timeNow - peer.LastPingTime > pingInterval) {
+                Console.WriteLine("ping 一下");
+                peer.Ping();
+            }
+            //遍历，删除
+            if (timeNow - peer.LastPingTime > pingInterval * 4) {
+                Console.WriteLine("超时删除");
+                peer.DisconnectHandle();
+                peers.Remove(peer.conv);
+            }
+
+        }
+
         /// <summary>
         /// 更新接收信息
         /// </summary>
@@ -64,19 +92,27 @@ namespace System.Net.Sockets.TKcp
                     uint head = System.BitConverter.ToUInt32(convBytes);
                     //如果是连接请求
                     if (head == 0) {
-                        //生成一个conv
-                        uint conv = GenerateConv();
-                        //创建一个peer，并初始化他
-                        Peer peer = new Peer(socket, conv, remote);
-                        peerPool.Add(conv, peer);
-                        peer.ConnectHandle(System.BitConverter.GetBytes(conv), 4);
 
-                        Console.WriteLine("接受了一个连接请求" + conv);
+                        //客户端已经连接，则不再连接
+                        if (!clients.ContainsValue(remote)) {
+                            //生成一个conv
+                            uint conv = GenerateConv();
+                            //创建一个peer，并初始化他
+                            Peer peer = new Peer(socket, conv, remote);
+                            peers.Add(conv, peer);
+                            clients.Add(conv, remote);
+                            peer.ConnectHandle(System.BitConverter.GetBytes(conv), 4);
+
+                            Console.WriteLine("接受了一个连接请求" + remote + conv);
+                        }
+                        else {
+                            Console.WriteLine("已经连接到服务器" + remote );
+                        }
 
                     }
                     //如果是收到的消息
                     else {
-                        peerPool[head].kcp.Input(recvBuffer);
+                        peers[head].kcp.Input(recvBuffer);
                     }
                     recvBuffer = null;
 
@@ -89,12 +125,13 @@ namespace System.Net.Sockets.TKcp
         /// 更新Peer
         /// </summary>
         void UpdataPeer() {
-            
+
             while (true) {
-                if (peerPool.Count <= 0) {
+                if (peers.Count <= 0) {
                     continue;
                 }
-                foreach (Peer peer in peerPool.Values) {
+                foreach (Peer peer in peers.Values) {
+                    CheckPing(peer);
                     peer.PeerUpdata();
                 }
             }
