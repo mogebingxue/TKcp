@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 
@@ -7,14 +8,17 @@ namespace System.Net.Sockets.TKcp
 {
     public class Server
     {
-        //以下应在peer里实现，各自管各自的心跳和收发消息,回调用action实现，心跳在peer里实现，在client里调用
-        //disconnect
-        //由客户端ping，客户端收到消息或者收到pong更新时间，一段时没收到就ping，长时间没收到就断开，
-        //服务端在updatapeer时也检查ping，收到ping更新时间，长时间收不到断开连接,执行disconnecthandle
+        /// <summary>
+        /// 最大连接数
+        /// </summary>
+        public int MaxConnection = 1000;
 
+        Peer[] peerpool;
+        
         Dictionary<uint, Peer> peers = new Dictionary<uint, Peer>();
 
         Dictionary<uint, EndPoint> clients = new Dictionary<uint, EndPoint>();
+
 
         /// <summary>
         /// 服务端udp
@@ -30,6 +34,13 @@ namespace System.Net.Sockets.TKcp
 
         void InitServer() {
             socket.Bind(localIpep);
+            //初始化缓存池
+            peerpool = new Peer[MaxConnection];
+            for(int i = 0;i<peerpool.Length;i++) {
+                peerpool[i] = new Peer(socket, (uint)(i + 1000), null);
+            }
+            
+            
             Thread updataThread = new Thread(Updata);
             updataThread.Start();
             Thread updataPeerThread = new Thread(UpdataPeer);
@@ -42,9 +53,9 @@ namespace System.Net.Sockets.TKcp
         /// <returns></returns>
         uint GenerateConv() {
             Random random = new Random();
-            uint conv = ((uint)(random.Next(int.MinValue + 1000, int.MaxValue) - int.MinValue));
+            uint conv = (uint)random.Next(1000, MaxConnection+1000);
             while (peers.ContainsKey(conv)) {
-                conv = ((uint)(random.Next(int.MinValue + 1000, int.MaxValue) - int.MinValue));
+                conv = (uint)random.Next(1000, MaxConnection + 1000);
             }
             return conv;
 
@@ -93,15 +104,21 @@ namespace System.Net.Sockets.TKcp
                     //如果是连接请求
                     if (head == 0) {
 
+                        if (clients.Count > MaxConnection) {
+                            Console.WriteLine("已达到最大连接数");
+                            continue;
+                        }
+
                         //客户端已经连接，则不再连接
                         if (!clients.ContainsValue(remote)) {
                             //生成一个conv
                             uint conv = GenerateConv();
-                            //创建一个peer，并初始化他
-                            Peer peer = new Peer(socket, conv, remote);
-                            peers.Add(conv, peer);
+                            //从缓存池里一个peer，并初始化他
+                            peerpool[conv-1000].Remote = remote;
+                            peerpool[conv - 1000].InitKcp();
+                            peers.Add(conv, peerpool[conv-1000]);
                             clients.Add(conv, remote);
-                            peer.ConnectHandle(System.BitConverter.GetBytes(conv), 4);
+                            peerpool[conv - 1000].ConnectHandle(System.BitConverter.GetBytes(conv));
 
                             Console.WriteLine("接受了一个连接请求" + remote + conv);
                         }
@@ -125,7 +142,7 @@ namespace System.Net.Sockets.TKcp
         /// 更新Peer
         /// </summary>
         void UpdataPeer() {
-
+           
             while (true) {
                 if (peers.Count <= 0) {
                     continue;
@@ -137,5 +154,26 @@ namespace System.Net.Sockets.TKcp
             }
         }
 
+        #region 注册回调
+
+        public void AddReceiveHandle(Action<byte[], int> method) {
+            foreach (Peer peer in peerpool) {
+                peer.ReceiveHandle += method;
+            }
+        }
+
+        public void AddConnectHandle(Action<byte[]> method) {
+            foreach (Peer peer in peerpool) {
+                peer.ConnectHandle += method;
+            }
+        }
+
+        public void AddDisconnectHandle(Action method) {
+            foreach (Peer peer in peerpool) {
+                peer.DisconnectHandle += method;
+            }
+        }
+
+        #endregion
     }
 }

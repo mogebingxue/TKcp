@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 
@@ -29,6 +30,7 @@ namespace System.Net.Sockets.TKcp
         Thread updataPeerThread;
 
         public Client() {
+            peer = new Peer(null, 0, null);
             InitClient();
         }
 
@@ -98,14 +100,17 @@ namespace System.Net.Sockets.TKcp
                         byte[] convBytes = new byte[4];
                         Array.Copy(recvBuffer, 4, convBytes, 0, 4);
                         uint conv = System.BitConverter.ToUInt32(convBytes);
-                        this.peer = new Peer(socket, conv, remote);
+                        peer.LocalSocket = socket;
+                        peer.conv = conv;
+                        peer.Remote = remote;
+                        peer.InitKcp();
                         if (peer.AcceptHandle != null) {
                             peer.AcceptHandle(System.BitConverter.GetBytes(conv), 4);
                         }
                         updataThread.Start();
                         updataPeerThread.Start();
-
-                        Console.WriteLine("客户端收到接受了连接请求" + conv);
+                        
+                        
                         Thread.Sleep(Timeout.Infinite);
                         
 
@@ -135,8 +140,8 @@ namespace System.Net.Sockets.TKcp
         /// 更新接收信息
         /// </summary>
         void Updata() {
-
             while (true) {
+
                 if (socket.Available > 0) {
                     byte[] recvBuffer = new byte[socket.ReceiveBufferSize];
                     EndPoint remote = new IPEndPoint(IPAddress.Any, 0);
@@ -162,13 +167,31 @@ namespace System.Net.Sockets.TKcp
         void UpdataPeer() {
             
             while (true) {
-                if(peer == null) {
+                if (peer == null) {
                     continue;
                 }
                 peer.PeerUpdata();
+                
             }
 
         }
+        #region 注册回调
+
+        public void AddReceiveHandle(Action<byte[],int> method) {
+            peer.ReceiveHandle += method;
+        }
+
+        public void AddAcceptHandle(Action<byte[], int> method) {
+            peer.AcceptHandle += method;
+        }
+
+        public void AddTimeoutHandle(Action method) {
+            peer.TimeoutHandle += method;
+        }
+
+        #endregion
 
     }
+
+
 }

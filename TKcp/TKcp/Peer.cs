@@ -37,13 +37,13 @@ namespace System.Net.Sockets.TKcp
         /// <summary>
         /// 连接请求的回调，在这里要实现回传同意连接和连接号给客户端，应用层也可以有自己的附加实现
         /// </summary>
-        public Action<byte[], int> ConnectHandle;
+        public Action<byte[]> ConnectHandle;
         /// <summary>
         /// 接收连接请求回调，客户端收到服务端的接收连接请求，之后的回调
         /// </summary>
         public Action<byte[], int> AcceptHandle;
         /// <summary>
-        /// 断开连接请求回调，客户端收到服务端的接收连接请求，之后的回调
+        /// 断开连接请求回调，服务端断开一个连接，之后的回调
         /// </summary>
         public Action DisconnectHandle;
         /// <summary>
@@ -72,32 +72,48 @@ namespace System.Net.Sockets.TKcp
             return Convert.ToInt64(ts.TotalSeconds);
         }
 
+        /// <summary>
+        /// 初始化Kcp
+        /// </summary>
+        public void InitKcp() {
+            //当这个Peer曾被使用过时，先释放它的Kcp，在重设
+            if (kcp != null) {
+                kcp.Dispose();
+            }
+           
+            //初始化Kcp
+            handle = new Handle(LocalSocket, Remote);
+            kcp = new Kcp.Kcp(conv, handle);
+            if (model == Model.FAST) {
+                kcp.NoDelay(1, 10, 2, 1);//fast
+            }
+            else {
+                kcp.NoDelay(0, 40, 0, 0);//normal
+            }
+            kcp.WndSize(64, 64);
+            kcp.SetMtu(512);
+
+        }
         
 
         /// <summary>
         /// 初始化Peer
         /// </summary>
         void InitPeer() {
-            //初始化Kcp
-            handle = new Handle(LocalSocket,Remote);
-            kcp = new Kcp.Kcp(conv, handle);
-            if(model == Model.FAST) {
-                kcp.NoDelay(1, 10, 2, 1);//fast
-            }
-            else {
-                kcp.NoDelay(0,40,0,0);//normal
-            }
-            kcp.WndSize(64, 64);
-            kcp.SetMtu(512);
+            
             ConnectHandle += OnConnect;
+            TimeoutHandle += OnTimeout;
+            AcceptHandle += OnAccept;
         }
+
+        
 
         /// <summary>
         /// 给客户端发送连接号
         /// </summary>
         /// <param name="conv"></param>
         /// <param name="length"></param>
-        private void OnConnect(byte[] conv, int length) {
+        private void OnConnect(byte[] conv) {
             byte[] sendBytes = new byte[8];
             //1代表是同意连接的回调
             uint flag = 1;
@@ -108,7 +124,7 @@ namespace System.Net.Sockets.TKcp
 
             ReceiveHandle += OnReceive;
             DisconnectHandle += OnDisconnect;
-            TimeoutHandle += OnTimeout;
+            
         }
 
         private void OnTimeout() {
@@ -119,8 +135,12 @@ namespace System.Net.Sockets.TKcp
             Console.WriteLine("客户端 " + conv + "断开");
         }
 
+        private void OnAccept(byte[] arg1, int arg2) {
+            Console.WriteLine("客户端收到接受了连接请求" + conv);
+            ReceiveHandle += OnReceive;
+        }
+
         private void OnReceive(byte[] bytes, int length) {
-            Console.WriteLine("更新时间戳");
             LastPingTime = GetTimeStamp();
             if(length == 4) {
                 uint msg = System.BitConverter.ToUInt32(bytes);
@@ -128,7 +148,6 @@ namespace System.Net.Sockets.TKcp
                     Pong();
                 }
             }
-            Console.WriteLine(System.Text.Encoding.UTF8.GetString(bytes));
         }
 
         public void Ping() {
@@ -157,7 +176,7 @@ namespace System.Net.Sockets.TKcp
         /// <param name="bytes">发送的数据</param>
         public void Send(Span<byte> bytes) {
             kcp.Send(bytes);
-            Console.WriteLine("应用层发送数据！");
+            Console.WriteLine("发送数据 " + " TO " + Remote + " "+ conv);
         }
 
         /// <summary>
@@ -165,22 +184,20 @@ namespace System.Net.Sockets.TKcp
         /// </summary>
         public void PeerUpdata() {
 
-            while (true) {
-                kcp.Update(DateTime.UtcNow);
-                var (temp, avalidSzie) = kcp.TryRecv();
-                if (avalidSzie > 0) {
-                    byte[] receiveBytes = new byte[1024];
-                    temp.Memory.Span.Slice(0, avalidSzie).CopyTo(receiveBytes);
-                    Console.WriteLine("应用层接收数据！");
-                    if (ReceiveHandle != null) {
-                        ReceiveHandle(receiveBytes, avalidSzie);
-                    }
-                    
+            kcp.Update(DateTime.UtcNow);
+            var (temp, avalidSzie) = kcp.TryRecv();
+            if (avalidSzie > 0) {
+                byte[] receiveBytes = new byte[1024];
+                temp.Memory.Span.Slice(0, avalidSzie).CopyTo(receiveBytes);
+                if (ReceiveHandle != null) {
+                    ReceiveHandle(receiveBytes, avalidSzie);
                 }
+
             }
+
         }
 
-        
+
     }
 
     /// <summary>
@@ -188,8 +205,8 @@ namespace System.Net.Sockets.TKcp
     /// </summary>
     class Handle : IKcpCallback
     {
-        Socket socket;
-        EndPoint remote;
+        public Socket socket;
+        public EndPoint remote;
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -207,9 +224,9 @@ namespace System.Net.Sockets.TKcp
         /// <param name="avalidLength"></param>
         public void Output(IMemoryOwner<byte> buffer, int avalidLength) {
             Span<byte> bytes = buffer.Memory.Slice(0, avalidLength).Span;
-            if (socket != null) {
+            if (socket != null&&remote!=null&&avalidLength>0) {
                 socket.SendTo(bytes.ToArray(), remote);
-                Console.WriteLine("UDP发送数据！" + bytes.Length + " " + " TO " + remote);
+                
             }
         }
     }
