@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Net.Sockets.TKcp;
+using TKcp;
 using System.Threading;
 
 namespace TKcpDemo
@@ -21,7 +21,7 @@ namespace TKcpDemo
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes("姚姚姚");
             client.Send(bytes);
             
-            void test(byte[] bytes, int length) {
+            void test(uint conv, byte[] bytes, int length) {
                 Console.WriteLine("注册了一个回调");
                 Console.WriteLine(System.Text.Encoding.UTF8.GetString(bytes));
             }

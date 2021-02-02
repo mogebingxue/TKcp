@@ -1,7 +1,10 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
+using System.Net;
+using System.Net.Sockets;
 using System.Net.Sockets.Kcp;
 
-namespace System.Net.Sockets.TKcp
+namespace TKcp
 {
 
     public class Peer
@@ -21,19 +24,22 @@ namespace System.Net.Sockets.TKcp
 
         public long LastPingTime;
         Handle handle;
-        public Kcp.Kcp kcp;
+        public Kcp kcp;
 
         public Model model;
 
-        public enum Model {
+        public int TimeoutTime = 0;
+
+        public enum Model
+        {
             FAST = 0,
-            NORMAL = 1 
+            NORMAL = 1
         }
 
         /// <summary>
         /// 应用层接收消息之后的回调，在应用层实现connection的时候要自己加上他的实现
         /// </summary>
-        public Action<byte[],int> ReceiveHandle;
+        public Action<uint, byte[], int> ReceiveHandle;
         /// <summary>
         /// 连接请求的回调，在这里要实现回传同意连接和连接号给客户端，应用层也可以有自己的附加实现
         /// </summary>
@@ -45,19 +51,19 @@ namespace System.Net.Sockets.TKcp
         /// <summary>
         /// 断开连接请求回调，服务端断开一个连接，之后的回调
         /// </summary>
-        public Action DisconnectHandle;
+        public Action<uint> DisconnectHandle;
         /// <summary>
         /// 客户端连接超时的回调
         /// </summary>
         public Action TimeoutHandle;
 
         #region 构造函数
-        public Peer(Socket socket, uint conv,EndPoint remote ,Model model = 0) {
+        public Peer(Socket socket, uint conv, EndPoint remote, Model model = 0) {
             this.LocalSocket = socket;
             this.conv = conv;
             this.Remote = remote;
             this.model = model;
-            
+
             LastPingTime = GetTimeStamp();
             this.InitPeer();
         }
@@ -80,10 +86,10 @@ namespace System.Net.Sockets.TKcp
             if (kcp != null) {
                 kcp.Dispose();
             }
-           
+
             //初始化Kcp
             handle = new Handle(LocalSocket, Remote);
-            kcp = new Kcp.Kcp(conv, handle);
+            kcp = new Kcp(conv, handle);
             if (model == Model.FAST) {
                 kcp.NoDelay(1, 10, 2, 1);//fast
             }
@@ -94,19 +100,19 @@ namespace System.Net.Sockets.TKcp
             kcp.SetMtu(512);
 
         }
-        
+
 
         /// <summary>
         /// 初始化Peer
         /// </summary>
         void InitPeer() {
-            
+
             ConnectHandle += OnConnect;
             TimeoutHandle += OnTimeout;
             AcceptHandle += OnAccept;
         }
 
-        
+
 
         /// <summary>
         /// 给客户端发送连接号
@@ -117,21 +123,21 @@ namespace System.Net.Sockets.TKcp
             byte[] sendBytes = new byte[8];
             //1代表是同意连接的回调
             uint flag = 1;
-            byte[] head = System.BitConverter.GetBytes(flag);
+            byte[] head = BitConverter.GetBytes(flag);
             head.CopyTo(sendBytes, 0);
             conv.CopyTo(sendBytes, 4);
             LocalSocket.SendTo(sendBytes, Remote);
 
             ReceiveHandle += OnReceive;
             DisconnectHandle += OnDisconnect;
-            
+
         }
 
         private void OnTimeout() {
             Console.WriteLine("连接超时，请检查你的网络");
         }
 
-        private void OnDisconnect() {
+        private void OnDisconnect(uint conv) {
             Console.WriteLine("客户端 " + conv + "断开");
         }
 
@@ -140,11 +146,12 @@ namespace System.Net.Sockets.TKcp
             ReceiveHandle += OnReceive;
         }
 
-        private void OnReceive(byte[] bytes, int length) {
+        private void OnReceive(uint conv, byte[] bytes, int length) {
             LastPingTime = GetTimeStamp();
-            if(length == 4) {
-                uint msg = System.BitConverter.ToUInt32(bytes);
-                if(msg == 2) {
+            TimeoutTime = 0;
+            if (length == 4) {
+                uint msg = System.BitConverter.ToUInt32(bytes, 0);
+                if (msg == 2) {
                     Pong();
                 }
             }
@@ -176,7 +183,7 @@ namespace System.Net.Sockets.TKcp
         /// <param name="bytes">发送的数据</param>
         public void Send(Span<byte> bytes) {
             kcp.Send(bytes);
-            Console.WriteLine("发送数据 " + " TO " + Remote + " "+ conv);
+            Console.WriteLine("发送数据 " + " TO " + Remote + " " + conv);
         }
 
         /// <summary>
@@ -190,7 +197,7 @@ namespace System.Net.Sockets.TKcp
                 byte[] receiveBytes = new byte[1024];
                 temp.Memory.Span.Slice(0, avalidSzie).CopyTo(receiveBytes);
                 if (ReceiveHandle != null) {
-                    ReceiveHandle(receiveBytes, avalidSzie);
+                    ReceiveHandle(conv, receiveBytes, avalidSzie);
                 }
 
             }
@@ -224,9 +231,9 @@ namespace System.Net.Sockets.TKcp
         /// <param name="avalidLength"></param>
         public void Output(IMemoryOwner<byte> buffer, int avalidLength) {
             Span<byte> bytes = buffer.Memory.Slice(0, avalidLength).Span;
-            if (socket != null&&remote!=null&&avalidLength>0) {
+            if (socket != null && remote != null && avalidLength > 0) {
                 socket.SendTo(bytes.ToArray(), remote);
-                
+
             }
         }
     }

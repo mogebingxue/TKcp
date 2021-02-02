@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 
-namespace System.Net.Sockets.TKcp
+namespace TKcp
 {
     public class Client
     {
@@ -19,7 +21,7 @@ namespace System.Net.Sockets.TKcp
         
         IPEndPoint localIpep = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8889);
 
-        Peer peer;
+        public Peer peer;
 
         long connectTime;
 
@@ -83,8 +85,6 @@ namespace System.Net.Sockets.TKcp
         /// 接收同意连接的消息
         /// </summary>
         void UpdataAccept() {
-            //重连次数
-            int time = 0;
             while (true) {
                 if (socket.Available > 0) {
                     byte[] recvBuffer = new byte[socket.ReceiveBufferSize];
@@ -93,13 +93,13 @@ namespace System.Net.Sockets.TKcp
                     //解析前四个byte的数据
                     byte[] headBytes = new byte[4];
                     Array.Copy(recvBuffer, 0, headBytes, 0, 4);
-                    uint head = System.BitConverter.ToUInt32(headBytes);
+                    uint head = System.BitConverter.ToUInt32(headBytes,0);
 
                     //如果是接受连接会送
                     if (head == 1) {
                         byte[] convBytes = new byte[4];
                         Array.Copy(recvBuffer, 4, convBytes, 0, 4);
-                        uint conv = System.BitConverter.ToUInt32(convBytes);
+                        uint conv = System.BitConverter.ToUInt32(convBytes,0);
                         peer.LocalSocket = socket;
                         peer.conv = conv;
                         peer.Remote = remote;
@@ -124,10 +124,10 @@ namespace System.Net.Sockets.TKcp
                         byte[] bytes = System.BitConverter.GetBytes(0);
                         socket.SendTo(bytes, serverIpep);
                         connectTime = GetTimeStamp();
-                        time++;
+                        peer.TimeoutTime++;
                     }
                     //超时
-                    if (time>=4) {
+                    if (peer.TimeoutTime >= 4) {
                         if (peer.TimeoutHandle != null) {
                             peer.TimeoutHandle();
                         }   
@@ -149,7 +149,7 @@ namespace System.Net.Sockets.TKcp
                     //解析前四个byte的数据
                     byte[] headBytes = new byte[4];
                     Array.Copy(recvBuffer, 0, headBytes, 0, 4);
-                    uint head = System.BitConverter.ToUInt32(headBytes);
+                    uint head = System.BitConverter.ToUInt32(headBytes,0);
 
                     //如果是收到的消息
                     if (head != 1) {
@@ -177,7 +177,7 @@ namespace System.Net.Sockets.TKcp
         }
         #region 注册回调
 
-        public void AddReceiveHandle(Action<byte[],int> method) {
+        public void AddReceiveHandle(Action<uint,byte[],int> method) {
             peer.ReceiveHandle += method;
         }
 

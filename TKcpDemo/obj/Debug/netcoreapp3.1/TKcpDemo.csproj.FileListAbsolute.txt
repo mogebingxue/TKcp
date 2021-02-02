@@ -14,3 +14,4 @@ C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcp.dll
 C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcp.pdb
 C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.csprojAssemblyReference.cache
 C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.csproj.CopyComplete
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\Kcp.dll

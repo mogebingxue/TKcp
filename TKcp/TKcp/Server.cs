@@ -1,21 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 
-namespace System.Net.Sockets.TKcp
+namespace TKcp
 {
     public class Server
     {
         /// <summary>
         /// 最大连接数
         /// </summary>
-        public int MaxConnection = 1000;
-
+        public int MaxConnection = 999;
+        /// <summary>服务端IP地址</summary>
+        public string Ip = "127.0.0.1";
+        /// <summary>服务端端口号</summary>
+        public int Port = 8888;
         Peer[] peerpool;
         
-        Dictionary<uint, Peer> peers = new Dictionary<uint, Peer>();
+        public Dictionary<uint, Peer> Peers = new Dictionary<uint, Peer>();
 
         Dictionary<uint, EndPoint> clients = new Dictionary<uint, EndPoint>();
 
@@ -25,14 +30,15 @@ namespace System.Net.Sockets.TKcp
         /// </summary>
         Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
-        IPEndPoint localIpep = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8888);
-        private int pingInterval = 30;
+        IPEndPoint localIpep;
+        public int PingInterval = 5;
 
         public Server() {
             InitServer();
         }
 
         void InitServer() {
+            localIpep = new IPEndPoint(IPAddress.Parse(Ip), Port);
             socket.Bind(localIpep);
             //初始化缓存池
             peerpool = new Peer[MaxConnection];
@@ -54,7 +60,7 @@ namespace System.Net.Sockets.TKcp
         uint GenerateConv() {
             Random random = new Random();
             uint conv = (uint)random.Next(1000, MaxConnection+1000);
-            while (peers.ContainsKey(conv)) {
+            while (Peers.ContainsKey(conv)) {
                 conv = (uint)random.Next(1000, MaxConnection + 1000);
             }
             return conv;
@@ -74,15 +80,17 @@ namespace System.Net.Sockets.TKcp
             //现在的时间戳
             long timeNow = GetTimeStamp();
             //Ping 一下
-            if (timeNow - peer.LastPingTime > pingInterval) {
-                Console.WriteLine("ping 一下");
+            if (timeNow - peer.LastPingTime > PingInterval) {
+                Console.WriteLine("ping 了一下"+"  "+ peer.TimeoutTime);
                 peer.Ping();
+                peer.LastPingTime = GetTimeStamp();
+                peer.TimeoutTime++;
             }
             //遍历，删除
-            if (timeNow - peer.LastPingTime > pingInterval * 4) {
+            if (peer.TimeoutTime > 4) {
                 Console.WriteLine("超时删除");
-                peer.DisconnectHandle();
-                peers.Remove(peer.conv);
+                peer.DisconnectHandle(peer.conv);
+                Peers.Remove(peer.conv);
             }
 
         }
@@ -109,19 +117,20 @@ namespace System.Net.Sockets.TKcp
                             continue;
                         }
 
-                        //客户端已经连接，则不再连接
+                        
                         if (!clients.ContainsValue(remote)) {
                             //生成一个conv
                             uint conv = GenerateConv();
                             //从缓存池里一个peer，并初始化他
                             peerpool[conv-1000].Remote = remote;
                             peerpool[conv - 1000].InitKcp();
-                            peers.Add(conv, peerpool[conv-1000]);
+                            Peers.Add(conv, peerpool[conv-1000]);
                             clients.Add(conv, remote);
                             peerpool[conv - 1000].ConnectHandle(System.BitConverter.GetBytes(conv));
 
-                            Console.WriteLine("接受了一个连接请求" + remote + conv);
+                            Console.WriteLine("接受了一个连接请求 " + remote + " "+conv);
                         }
+                        //客户端已经连接，则不再连接
                         else {
                             Console.WriteLine("已经连接到服务器" + remote );
                         }
@@ -129,7 +138,9 @@ namespace System.Net.Sockets.TKcp
                     }
                     //如果是收到的消息
                     else {
-                        peers[head].kcp.Input(recvBuffer);
+                        if (Peers.ContainsKey(head)) {
+                            Peers[head].kcp.Input(recvBuffer);
+                        }
                     }
                     recvBuffer = null;
 
@@ -137,6 +148,10 @@ namespace System.Net.Sockets.TKcp
             }
         }
 
+        public void Send(uint conv, byte[] bytes) {
+            Peers[conv].Send(bytes);
+
+        }
 
         /// <summary>
         /// 更新Peer
@@ -144,10 +159,11 @@ namespace System.Net.Sockets.TKcp
         void UpdataPeer() {
            
             while (true) {
-                if (peers.Count <= 0) {
+                if (Peers.Count <= 0) {
                     continue;
                 }
-                foreach (Peer peer in peers.Values) {
+                foreach (Peer peer in Peers.Values) {
+
                     CheckPing(peer);
                     peer.PeerUpdata();
                 }
@@ -156,7 +172,7 @@ namespace System.Net.Sockets.TKcp
 
         #region 注册回调
 
-        public void AddReceiveHandle(Action<byte[], int> method) {
+        public void AddReceiveHandle(Action<uint, byte[], int> method) {
             foreach (Peer peer in peerpool) {
                 peer.ReceiveHandle += method;
             }
@@ -168,7 +184,7 @@ namespace System.Net.Sockets.TKcp
             }
         }
 
-        public void AddDisconnectHandle(Action method) {
+        public void AddDisconnectHandle(Action<uint> method) {
             foreach (Peer peer in peerpool) {
                 peer.DisconnectHandle += method;
             }
