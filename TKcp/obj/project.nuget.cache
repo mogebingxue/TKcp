@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "ml5XWsssa/gNXmK0E6GvdQHcK7WfZa2OekNH0MtOqqjOzBH9cW+bUNg/XvpmTIqve7vOOnqBNBXYeD91pt0Tow==",
+  "success": true,
+  "projectFilePath": "C:\\Project\\csharp\\TKcp\\TKcp\\TKcp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\莫歌冰雪\\.nuget\\packages\\kcp\\2.2.0\\kcp.2.2.0.nupkg.sha512",
+    "C:\\Users\\莫歌冰雪\\.nuget\\packages\\system.buffers\\4.5.1\\system.buffers.4.5.1.nupkg.sha512",
+    "C:\\Users\\莫歌冰雪\\.nuget\\packages\\system.memory\\4.5.4\\system.memory.4.5.4.nupkg.sha512",
+    "C:\\Users\\莫歌冰雪\\.nuget\\packages\\system.numerics.vectors\\4.4.0\\system.numerics.vectors.4.4.0.nupkg.sha512",
+    "C:\\Users\\莫歌冰雪\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\4.5.3\\system.runtime.compilerservices.unsafe.4.5.3.nupkg.sha512",
+    "C:\\Users\\莫歌冰雪\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512"
+  ],
+  "logs": []
+}
