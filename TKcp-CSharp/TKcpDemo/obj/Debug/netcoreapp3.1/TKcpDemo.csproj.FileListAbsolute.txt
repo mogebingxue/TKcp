@@ -1,0 +1,17 @@
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.AssemblyInfoInputs.cache
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.AssemblyInfo.cs
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.csproj.CoreCompileInputs.cache
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcpDemo.exe
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcpDemo.deps.json
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcpDemo.runtimeconfig.json
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcpDemo.runtimeconfig.dev.json
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcpDemo.dll
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcpDemo.pdb
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.dll
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.pdb
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.genruntimeconfig.cache
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcp.dll
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\TKcp.pdb
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.csprojAssemblyReference.cache
+C:\Project\csharp\TKcp\TKcpDemo\obj\Debug\netcoreapp3.1\TKcpDemo.csproj.CopyComplete
+C:\Project\csharp\TKcp\TKcpDemo\bin\Debug\netcoreapp3.1\Kcp.dll

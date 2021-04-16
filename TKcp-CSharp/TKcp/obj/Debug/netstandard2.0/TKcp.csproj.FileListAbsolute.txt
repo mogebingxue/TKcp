@@ -1,0 +1,4 @@
+C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.0\TKcp.csprojAssemblyReference.cache
+C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.0\TKcp.AssemblyInfoInputs.cache
+C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.0\TKcp.AssemblyInfo.cs
+C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.0\TKcp.csproj.CoreCompileInputs.cache
