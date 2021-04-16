@@ -1,9 +1,0 @@
-C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.1\TKcp.AssemblyInfoInputs.cache
-C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.1\TKcp.AssemblyInfo.cs
-C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.1\TKcp.csproj.CoreCompileInputs.cache
-C:\Project\csharp\TKcp\TKcp\bin\Debug\netstandard2.1\TKcp.deps.json
-C:\Project\csharp\TKcp\TKcp\bin\Debug\netstandard2.1\TKcp.dll
-C:\Project\csharp\TKcp\TKcp\bin\Debug\netstandard2.1\TKcp.pdb
-C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.1\TKcp.dll
-C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.1\TKcp.pdb
-C:\Project\csharp\TKcp\TKcp\obj\Debug\netstandard2.1\TKcp.csprojAssemblyReference.cache
